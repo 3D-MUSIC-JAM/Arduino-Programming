@@ -37,18 +37,17 @@ void loop() {
   b_intencity = b_intencity + b_increment;
  
   //now change direction for each color if it reaches 255
-  if (r_intencity >= 255 || r_intencity <= 0)
-  {
+  if (r_intencity >= 255 || r_intencity <= 0) {
     r_increment = r_increment * -1;
   }
-  if (g_intencity >= 255 || g_intencity <= 0)
-  {
+
+  if (g_intencity >= 255 || g_intencity <= 0) {
     g_increment = g_increment * -1;
   }
-  if (b_intencity >= 255 || b_intencity <= 0)
-  {
+
+  if (b_intencity >= 255 || b_intencity <= 0) {
     b_increment = b_increment * -1;
   }
   setColor(r_intencity, g_intencity, b_intencity);
-  delay(5);    //a little delay is needed so you can see the change
+  delay(10);    //a little delay is needed so you can see the change
 }
