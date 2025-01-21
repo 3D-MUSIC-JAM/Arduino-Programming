@@ -7,50 +7,50 @@
 #define ENABLE_DEBUG true
 
 // Pins for rotary encoder
-const int pinA = 2; // Encoder pin A
-const int pinB = 3; // Encoder pin B
-volatile int encoderPosition = 0; // Track rotary encoder position
+const int pinRotEnc_A = 2; // Encoder pin A
+const int pinRotEnc_B = 3; // Encoder pin B
+volatile int posRotEnc = 0; // Track rotary encoder position
 
 // Pins for RGB-LEDs
-const int redPin = 9;       // Top-half Red
-const int greenPin = 10;    // Top-half Green
-const int bluePin = 11;     // Top-half Blue
-const int redPin2 = 6;      // Bottom-half Red
-const int greenPin2 = 5;    // Bottom-half Green
-const int bluePin2 = 3;     // Bottom-half Blue
+const int pinRed_Top = 9;       // Top-half Red
+const int pinGreen_Top = 10;    // Top-half Green
+const int pinBlue_Top = 11;     // Top-half Blue
+const int pinRed_Bottom = 6;      // Bottom-half Red
+const int pinGreen_Bottom = 5;    // Bottom-half Green
+const int bluePin_Bottom = 3;     // Bottom-half Blue
 
 // Pin for toggle switch
-const int switchPin = 4;    // Digital input for toggle switch
+const int pinSwLedMode = 4;    // Digital input for toggle switch
 
 // Pins for HC-SR04
-const int trigPin = 7;
-const int echoPin = 8;
+const int pinSr04Trig = 7;
+const int pinSr04Echo = 8;
 
 // LSM9DS1 setup (G-sensor)
 Adafruit_LSM9DS1 lsm = Adafruit_LSM9DS1();
 
 // Interrupt handler for rotary encoder
-void encoderISR() {
-  static int lastAState = LOW;
-  int currentAState = digitalRead(pinA);
-  if (currentAState != lastAState) {
-    if (digitalRead(pinB) != currentAState) {
-      encoderPosition++; // Clockwise
+void handlerRotEnc() {
+  static int stateLastRotEnc_A = LOW;
+  int stateCurrentRotEnc_A = digitalRead(pinRotEnc_A);
+  if (stateCurrentRotEnc_A != stateLastRotEnc_A) {
+    if (digitalRead(pinRotEnc_B) != stateCurrentRotEnc_A) {
+      posRotEnc++; // Clockwise
     } else {
-      encoderPosition--; // Counterclockwise
+      posRotEnc--; // Counterclockwise
     }
   }
-  lastAState = currentAState;
+  stateLastRotEnc_A = stateCurrentRotEnc_A;
 }
 
 // Function to get distance from HC-SR04
-long getDistance() {
-  digitalWrite(trigPin, LOW);
+long handlerDistance() {
+  digitalWrite(pinSr04Trig, LOW);
   delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
+  digitalWrite(pinSr04Trig, HIGH);
   delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  long duration = pulseIn(echoPin, HIGH);
+  digitalWrite(pinSr04Trig, LOW);
+  long duration = pulseIn(pinSr04Echo, HIGH);
   return duration * 0.034 / 2; // Distance in cm
 }
 
@@ -73,24 +73,24 @@ void setup() {
   Serial.begin(9600);
 
   // Initialize rotary encoder pins
-  pinMode(pinA, INPUT_PULLUP);
-  pinMode(pinB, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(pinA), encoderISR, CHANGE);
+  pinMode(pinRotEnc_A, INPUT_PULLUP);
+  pinMode(pinRotEnc_B, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(pinRotEnc_A), handlerRotEnc, CHANGE);
 
   // Initialize RGB LED pins
-  pinMode(redPin, OUTPUT);
-  pinMode(greenPin, OUTPUT);
-  pinMode(bluePin, OUTPUT);
-  pinMode(redPin2, OUTPUT);
-  pinMode(greenPin2, OUTPUT);
-  pinMode(bluePin2, OUTPUT);
+  pinMode(pinRed_Top, OUTPUT);
+  pinMode(pinGreen_Top, OUTPUT);
+  pinMode(pinBlue_Top, OUTPUT);
+  pinMode(pinRed_Bottom, OUTPUT);
+  pinMode(pinGreen_Bottom, OUTPUT);
+  pinMode(bluePin_Bottom, OUTPUT);
 
   // Initialize toggle switch pin
-  pinMode(switchPin, INPUT_PULLUP); // Assuming toggle switch is normally HIGH
+  pinMode(pinSwLedMode, INPUT_PULLUP); // Assuming toggle switch is normally HIGH
 
   // Initialize HC-SR04 pins
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
+  pinMode(pinSr04Trig, OUTPUT);
+  pinMode(pinSr04Echo, INPUT);
 
   // Initialize LSM9DS1 (G-sensor)
   if (!lsm.begin()) {
@@ -106,7 +106,7 @@ void loop() {
   float accelX = lsm.accelData.x;
   float accelY = lsm.accelData.y;
   float accelZ = lsm.accelData.z;
-  long distance = getDistance();
+  long distance = handlerDistance();
   if (distance > 100) distance = 100; // Cap distance for scaling
 
   // Calculate base brightness values from G-sensor and distance
@@ -115,10 +115,10 @@ void loop() {
   int baseB = (int)(map(abs(accelZ * 100), 0, 800, 0, 255) * (1.0 - distance / 100.0));
 
   // Calculate sinusoidal rotation
-  int angle = (encoderPosition * 360) / 24; // Map encoder position to 0-360°
+  int angle = (posRotEnc * 360) / 24; // Map encoder position to 0-360°
 
   // Check toggle switch state
-  bool isSwitched = digitalRead(switchPin) == LOW; // Assuming LOW when toggled
+  bool isSwitched = digitalRead(pinSwLedMode) == LOW; // Assuming LOW when toggled
 
   // Phase offset for the second LED
   int phaseOffset = isSwitched ? 180 : 0;
@@ -130,14 +130,14 @@ void loop() {
   calculateSinusoidalBrightness(angle, baseR, baseG, baseB, phaseOffset, blendedR2, blendedG2, blendedB2);
 
   // Set brightness for top-half LED
-  analogWrite(redPin, blendedR1);
-  analogWrite(greenPin, blendedG1);
-  analogWrite(bluePin, blendedB1);
+  analogWrite(pinRed_Top, blendedR1);
+  analogWrite(pinGreen_Top, blendedG1);
+  analogWrite(pinBlue_Top, blendedB1);
 
   // Set brightness for bottom-half LED
-  analogWrite(redPin2, blendedR2);
-  analogWrite(greenPin2, blendedG2);
-  analogWrite(bluePin2, blendedB2);
+  analogWrite(pinRed_Bottom, blendedR2);
+  analogWrite(pinGreen_Bottom, blendedG2);
+  analogWrite(bluePin_Bottom, blendedB2);
 
   // Debug output
   if (ENABLE_DEBUG) {
